@@ -14,6 +14,5 @@ def ping():
     return "Cats Service. Version 0.1"
 
 
-
 if __name__ == "__main__":
     app.run(host="localhost", port=8080)
