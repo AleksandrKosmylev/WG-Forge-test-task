@@ -1,8 +1,8 @@
 import json
 import os
 from operator import itemgetter
-from urllib import request
 
+from flask import request
 from flask import Flask
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
@@ -11,28 +11,13 @@ from psycopg2.extras import NamedTupleCursor
 app = Flask(__name__)
 
 # DATABASE_URL="postgres://wbveoezi:u6ASwE-0rCKJMuNoRF9sWB4YAZGQcFDQ@cornelius.db.elephantsql.com/wbveoezi"
-conn = psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432") 
-#conn = psycopg2.connect(DATABASE_URL)
+conn = psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432")
+# conn = psycopg2.connect(DATABASE_URL)
 
-"""
-cursor = conn.cursor()
-query = "SELECT * FROM cats"
-cursor.execute(query)
-result = cursor.fetchall()
-res = []
-for row in result:
-    d = {}
-    for i, col in enumerate(cursor.description):
-        d[col[0]] = row[i]
-        res.append(d)
-json_result = json.dumps(res)
-print(json_result)
-conn.close()
-"""
 
 def get_db():
     # return psycopg2.connect(app.config['DATABASE_URL'])
-    return psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432") 
+    return psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432")
 
 
 def get_cats(conn):
@@ -43,26 +28,36 @@ def get_cats(conn):
         )
         cats = curs.fetchall()
         res = []
-
         for row in cats:
-            # print(row)
             d = {}
             for i, col in enumerate(curs.description):
-                # print(i,  col)
                 d[col[0]] = row[i]
             res.append(d)
         json_result = json.dumps(res)
-        # print(json_result, 'ss')
         return json_result
 
-def get_db_data_cats(conn):
-    with conn() as database_connection:
+
+def post_cats(conn, input_data):
+    print(input_data,  '2 step')
+    with conn.cursor() as curs:
+        print(input_data)
+        # "INSERT into cats (name, color, tail_length, whiskers_length) values ('Tihon', 'red & white', 15, 12);"
+        query_request = f"INSERT into cats (name, color, tail_length, whiskers_length) values {input_data['name'], input_data['color'], input_data['tail_length'], input_data['whiskers_length']};"
+        curs.execute(
+            query_request
+        )
+
+
+def get_db_data_cats():
+    with get_db() as database_connection:
         result = get_cats(database_connection)
-        # extracted_from_urls_checks_table = [i[0] for i in result_url]
-        # urls_checks_data = get_check_and_response(extracted_from_urls_checks_table, database_connection)
-        # return result_url, urls_checks_data
         return result
 
+
+def post_db_data_cats(input_data):
+    print(input_data, "1step")
+    with get_db() as database_connection:
+        post_cats(database_connection, input_data)
 
 
 @app.route('/')
@@ -75,13 +70,13 @@ def ping():
     return "Cats Service. Version 0.1"
 
 
-@app.route("/cats")
+@app.route("/cats", methods=['GET'])
 def show_cats():
     error = None
     val = request.values
     if val and val != '':
         print(val)
-        list_of_cats = get_db_data_cats(get_db)
+        list_of_cats = get_db_data_cats()
         data = json.loads(list_of_cats)
         table_keys = list(data[0])
         len_of_list = len(data)
@@ -112,68 +107,40 @@ def show_cats():
             limit = int(val['limit'])
             data = data[:limit]
         return str(data)
-
     else:
-        return get_db_data_cats(get_db)
-
-    
-    """
-    conn = psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432")
-
-    cursor = conn.cursor()
-    query = "SELECT * FROM cats"
-    cursor.execute(query)
-    result = cursor.fetchall()
-    res = []
-    for row in result:
-        d = {}
-        for i, col in enumerate(cursor.description):
-            d[col[0]] = row[i]
-            res.append(d)
-    json_result = json.dumps(res)
-    conn.close()
-    return json_result
-    """
-
-"""
-    #conn = psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432")
-    conn = get_db()
-    cursor = conn.cursor()
-    query = "SELECT * FROM cats"
-    cursor.execute(query)
-    result = cursor.fetchall()
-    res = []
-    for row in result:
-        d = {}
-        for i, col in enumerate(cursor.description):
-            d[col[0]] = row[i]
-            res.append(d)
-    json_result = json.dumps(res)
-    conn.close()
-    return json_result
-"""
+        return get_db_data_cats()
 
 
-from flask import request
+def post_validation(request_data):
+    try:
+        json.loads(request_data)
+    except ValueError as err:
+        return "Invalid JSON"
+    data = json.loads(request_data.decode('utf-8'))
+    current_names = [i['name'] for i in json.loads(get_db_data_cats())]
+    if data['name'] in current_names:
+        return f"{data['name']} is already  in list"
+    if type(data['tail_length']) not in (int, float):
+        return "tail_length must be float or integer"
+    if data['tail_length'] < 0:
+        return f"tail_length cannot be negative "
+    if type(data['whiskers_length']) not in (int, float):
+        return "'whiskers_length must be float or integer"
+    if data['whiskers_length'] < 0:
+        return "whiskers_length cannot be negative"
+    return None
 
-@app.route('/search/', methods=['GET'])
-def search():
-    error = None
-    query = request.args.get('query')
-    # проверяем, передается ли параметр
-    # 'query' в URL-адресе
-    if query and query != '':
-        # если `query`существует и это не пустая строка,
-        # то можно приступать к обработке запроса
-        opt = request.args.get('opt', default=0, type=int)
-        # возвратит `query=str.lower, opt=9`
-        return f"query={query}, opt={opt}"
+
+@app.post("/cat")
+def post_cat():
+    json_data = request.get_data()
+    if post_validation(json_data) is None:
+        data = json.loads(json_data.decode('utf-8'))
+        post_db_data_cats(data)
+        return f"{data['name']} added"
     else:
-        # если `query` не существует или это пустая строка, то 
-        # отображаем форму поискового запроса с сообщением.
-        error = 'Не введен запрос!'
-        # return render_template('search.html', error=error)
-        return error
+        return post_validation(json_data)
+
 
 if __name__ == "__main__":
     app.run(host="localhost", port=8080)
@@ -184,37 +151,18 @@ curl -X GET http://localhost:8080/cats?attribute=name&order=asc
 curl -X GET http://localhost:8080/cats?attribute=tail_length&order=desc
 curl -X GET http://localhost:8080/cats?offset=10&limit=10
 curl -X GET http://localhost:8080/cats?attribute=color&order=asc&offset=5&limit=2
-"""
 
 
-"""
-@app.route("/cats")
-def show_cats():
-    error = None
-    # attribute = request.args.get('attribute')
-    val = request.values
-    if val and val != '':
-        list_of_cats = get_db_data_cats(get_db)
-        data = json.loads(list_of_cats)
-        if "attribute" in val:
-            ordering = val['order']
-            if ordering == 'asc' or ordering == 'desc':
+curl -X POST http://localhost:8080/cat \
+-d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
+curl -X POST http://127.0.0.1:8080/cat \
+-d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
 
-                print('asc')
-                # newlist = sorted(data, key=lambda d: d[val['attribute']], reverse=False)
-            elif val['order'] == 'desc':
-                print('desc')
-                newlist = sorted(data, key=lambda d: d[val['attribute']], reverse=True)
 
-        if "offset" in val or 'limit' in val:
-            offset = val["offset"]
-            limit = val['limit']
+curl -X POST http://127.0.0.1:8000/cats -d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
+curl -X POST http://127.0.0.1:8000/cats -d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
 
-        get_db_data_cats(get_db, ordering, offset)
 
-        return newlist
-        # return [val['order'], val["attribute"]]
-        # list_of_cats.sort(key=lambda x: x["name"])
-    else:
-        return get_db_data_cats(get_db)
+curl -X POST http://127.0.0.1:8000/cat \-d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
+
 """
