@@ -4,11 +4,19 @@ from operator import itemgetter
 
 from flask import request
 from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 
 
 app = Flask(__name__)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["600 per minute"],
+    storage_uri="memory://"
+)
 
 # DATABASE_URL="postgres://wbveoezi:u6ASwE-0rCKJMuNoRF9sWB4YAZGQcFDQ@cornelius.db.elephantsql.com/wbveoezi"
 conn = psycopg2.connect(dbname="wg_forge_db", user="wg_forge", password="a42", host="localhost", port="5432")
@@ -38,9 +46,7 @@ def get_cats(conn):
 
 
 def post_cats(conn, input_data):
-    print(input_data,  '2 step')
     with conn.cursor() as curs:
-        print(input_data)
         # "INSERT into cats (name, color, tail_length, whiskers_length) values ('Tihon', 'red & white', 15, 12);"
         query_request = f"INSERT into cats (name, color, tail_length, whiskers_length) values {input_data['name'], input_data['color'], input_data['tail_length'], input_data['whiskers_length']};"
         curs.execute(
@@ -55,9 +61,13 @@ def get_db_data_cats():
 
 
 def post_db_data_cats(input_data):
-    print(input_data, "1step")
     with get_db() as database_connection:
         post_cats(database_connection, input_data)
+
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return "429 Too Many Requests"
 
 
 @app.route('/')
@@ -75,7 +85,6 @@ def show_cats():
     error = None
     val = request.values
     if val and val != '':
-        print(val)
         list_of_cats = get_db_data_cats()
         data = json.loads(list_of_cats)
         table_keys = list(data[0])

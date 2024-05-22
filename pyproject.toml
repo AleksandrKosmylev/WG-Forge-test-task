@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.10"
 flask = "^3.0.3"
 psycopg2-binary = "^2.9.9"
+flask-limiter = {extras = ["redis"], version = "^3.7.0"}
 
 
 [build-system]
