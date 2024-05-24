@@ -1,7 +1,7 @@
 start:
 	docker pull yzh44yzh/wg_forge_backend_env:1.1
 	docker run -p 5432:5432 -d yzh44yzh/wg_forge_backend_env:1.1
-bash_conteiner:
+bash_container:
 	docker exec -ti $(docker ps -q | head -n 1) bash
 enter_db:
 	psql ${DATABASE_CONNECTION}
