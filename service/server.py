@@ -1,13 +1,11 @@
 import json
 import os
 from operator import itemgetter
-
 from flask import request
 from flask import Flask
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import psycopg2
-from psycopg2.extras import NamedTupleCursor
 
 
 app = Flask(__name__)
@@ -30,7 +28,7 @@ def get_db():
 
 def get_cats(conn):
     with conn.cursor() as curs:
-        query_request = 'SELECT * FROM cats;'
+        query_request = 'SELECT * FROM public.cats;'
         curs.execute(
             query_request
         )
@@ -71,8 +69,8 @@ def ratelimit_handler(e):
 
 
 @app.route('/')
-def hello_world():
-    return 'Welcome to Flask!'
+def welcome():
+    return 'Welcome to cats database'
 
 
 @app.route("/ping")
@@ -80,10 +78,14 @@ def ping():
     return "Cats Service. Version 0.1"
 
 
+
 @app.route("/cats", methods=['GET'])
 def show_cats():
     error = None
     val = request.values
+    print(val, 'val')
+    json_data = request.url
+    print(json_data, 'data')
     if val and val != '':
         list_of_cats = get_db_data_cats()
         data = json.loads(list_of_cats)
@@ -120,6 +122,8 @@ def show_cats():
         return get_db_data_cats()
 
 
+
+
 def post_validation(request_data):
     try:
         json.loads(request_data)
@@ -143,6 +147,7 @@ def post_validation(request_data):
 @app.post("/cat")
 def post_cat():
     json_data = request.get_data()
+    print(type(json_data))
     if post_validation(json_data) is None:
         data = json.loads(json_data.decode('utf-8'))
         post_db_data_cats(data)
@@ -154,24 +159,50 @@ def post_cat():
 if __name__ == "__main__":
     app.run(host="localhost", port=8080)
 
-# search?query=str.lower&opt=9:
 """
-curl -X GET http://localhost:8080/cats?attribute=name&order=asc
-curl -X GET http://localhost:8080/cats?attribute=tail_length&order=desc
-curl -X GET http://localhost:8080/cats?offset=10&limit=10
-curl -X GET http://localhost:8080/cats?attribute=color&order=asc&offset=5&limit=2
+@app.route("/cats", methods=['GET'])
+def show_cats():
+    error = None
+    val = request.values
+    params = request.args.to_dict()
+    print(params,  'req')
+    if val and val != '':
+        list_of_cats = get_db_data_cats()
+        data = json.loads(list_of_cats)
+        table_keys = list(data[0])
+        len_of_list = len(data)
+        if "attribute" in val:
+            if val['attribute'] in table_keys:
+                if val['order'] == 'asc':
+                    data = sorted(data, key=lambda d: d[val['attribute']], reverse=False)
+                elif val['order'] == 'desc':
+                    data = sorted(data, key=lambda d: d[val['attribute']], reverse=True)
+                else:
+                    error = " Order attribute is incorrect"
+                    return error
+            else:
+                error = "Attribute is incorrect"
+                return error
+        if "offset" in val:
+            offset = int(val["offset"])
+            if offset >= len_of_list:
+                error = " Check offset value. Value is too big"
+                return error
+            else:
+                if 'limit' in val:
+                    limit = int(val['limit'])
+                    data = data[offset:(offset+limit)]
+                else:
+                    data = data[offset:]
+        if "limit" in val and 'offset' not in val:
+            limit = int(val['limit'])
+            data = data[:limit]
+        return str(data)
+    else:
+        return get_db_data_cats()
 
 
-curl -X POST http://localhost:8080/cat \
--d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
-curl -X POST http://127.0.0.1:8080/cat \
--d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
 
 
-curl -X POST http://127.0.0.1:8000/cats -d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
-curl -X POST http://127.0.0.1:8000/cats -d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
-
-
-curl -X POST http://127.0.0.1:8000/cat \-d "{\"name\": \"Tihon\", \"color\": \"red & white\", \"tail_length\": 15, \"whiskers_length\": 12}"
 
 """
