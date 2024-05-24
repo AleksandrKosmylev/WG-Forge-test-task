@@ -3,6 +3,7 @@ name = "test-task-wg"
 version = "0.1.0"
 description = "wg_test_task"
 authors = ["AleksandrKosmylev <alex.kosmylev@gmail.com>"]
+packages = [{include = "service"}]
 readme = "README.md"
 
 [tool.poetry.dependencies]

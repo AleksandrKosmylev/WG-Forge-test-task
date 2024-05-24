@@ -12,8 +12,7 @@ run:
 	flask --app service run --port 8000
 local_run :
 	python3 service/server.py
-
 tasks1_2: 
 	python3 tasks1_2.py
-
-
+test:
+	poetry run pytest tests/test_app.py
