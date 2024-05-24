@@ -1,14 +1,14 @@
 ###  Test_task WG Forge
 
 
-1. Execute commands for task1 and task2:
+1. Execute commands for tasks 1 and 2:
 ```
     make start
     make tasks1_2
 ```
 Required data will be inserted in tables cat_colors_info and cats_stat.
 
-2. Execute command for task1 and task2:   
+2. Execute command for tasks 3-5:   
 ```
     make local_run
 ```
