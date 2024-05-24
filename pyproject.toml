@@ -11,6 +11,7 @@ flask = "^3.0.3"
 psycopg2-binary = "^2.9.9"
 flask-limiter = {extras = ["redis"], version = "^3.7.0"}
 pytest = "^8.2.1"
+python-dotenv = "^1.0.1"
 
 
 [build-system]
