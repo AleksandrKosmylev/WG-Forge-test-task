@@ -4,7 +4,7 @@ start:
 bash_conteiner:
 	docker exec -ti $(docker ps -q | head -n 1) bash
 enter_db:
-	psql --host=localhost --port=5432 --dbname=wg_forge_db --username=wg_forge --password
+	psql ${DATABASE_CONNECTION}
 
 stop:
 	docker stop $(docker ps -q | head -n 1)
