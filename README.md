@@ -1,5 +1,10 @@
 ###  Test_task WG Forge
 
+Download repository and enter in main directory:
+```
+    git clone git@github.com:AleksandrKosmylev/WG-Forge-test-task.git
+    cd WG-Forge-test-task/
+```
 
 1. Execute commands for tasks 1 and 2:
 ```
@@ -26,5 +31,5 @@ Request examples:
 
 3. Close app connection:
 ```
-    make stop
+    docker stop $(docker ps -q | head -n 1)
 ```
